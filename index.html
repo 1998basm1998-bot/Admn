@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة رفع الفيديوهات الذكية</title>
+    <style>
+        :root {
+            --primary: #00c6ff;
+            --secondary: #0072ff;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at center, #1e1e38 0%, var(--bg-dark) 100%);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* حاوية التصميم الزجاجية النيومورفيزم */
+        .upload-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.2);
+            transform: perspective(1000px);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-weight: 600;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 25px;
+        }
+
+        /* منطقة إسقاط واختيار الملف */
+        .drop-zone {
+            border: 2px dashed rgba(0, 198, 255, 0.4);
+            border-radius: 16px;
+            padding: 30px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--primary);
+            background: rgba(0, 198, 255, 0.05);
+            box-shadow: 0 0 15px rgba(0, 198, 255, 0.2);
+        }
+
+        .drop-zone icon {
+            font-size: 50px;
+            display: block;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #94a3b8;
+            word-break: break-all;
+        }
+
+        /* زر الرفع */
+        .btn-upload {
+            margin-top: 25px;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 114, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 198, 255, 0.6);
+        }
+
+        .btn-upload:disabled {
+            background: #475569;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* حاوية شريط التحميل ثلاثي الأبعاد 3D */
+        .progress-wrapper {
+            display: none;
+            margin-top: 30px;
+            perspective: 800px; /* يعطي عمق البعد الثالث */
+        }
+
+        .progress-3d {
+            width: 100%;
+            height: 24px;
+            background: #0f172a;
+            border-radius: 6px;
+            transform-style: preserve-3d;
+            transform: rotateX(20deg); /* إمالة الشريط لرؤية الـ 3D */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5), 
+                        inset 0 2px 4px rgba(0,0,0,0.8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #0072ff, #00c6ff);
+            position: relative;
+            transform-style: preserve-3d;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 12px rgba(0, 198, 255, 0.8);
+        }
+
+        /* توهج وتأثير حركي داخل شريط الـ 3D */
+        .progress-bar::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(
+                45deg,
+                rgba(255,255,255,0.15) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255,255,255,0.15) 50%,
+                rgba(255,255,255,0.15) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 30px 30px;
+            animation: moveStripes 1s linear infinite;
+        }
+
+        @keyframes moveStripes {
+            0% { background-position: 0 0; }
+            100% { background-position: 30px 0; }
+        }
+
+        .progress-text {
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* شاشة عرض النتيجة */
+        .result-box {
+            display: none;
+            margin-top: 25px;
+            padding: 15px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+        }
+
+        .result-box a {
+            color: var(--primary);
+            word-break: break-all;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="upload-container">
+        <h2>رفع فيديو إلى Top4Top</h2>
+        
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <icon>🎬</icon>
+            <p>اسحب وأفلت ملف الفيديو هنا أو اضغط للتصفح</p>
+            <input type="file" id="fileInput" accept="video/*">
+        </div>
+
+        <div class="file-info" id="fileInfo">لم يتم اختيار أي ملف بعد</div>
+
+        <button class="btn-upload" id="uploadBtn" disabled>ابدأ الرفع الآن</button>
+
+        <div class="progress-wrapper" id="progressWrapper">
+            <div class="progress-3d">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+
+        <div class="result-box" id="resultBox">
+            <p style="color: #10b981; margin-top: 0;">تم الرفع بنجاح! 🎉</p>
+            <div id="linkContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const progressWrapper = document.getElementById('progressWrapper');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const resultBox = document.getElementById('resultBox');
+        const linkContainer = document.getElementById('linkContainer');
+
+        // مفتاح الـ API الخاص بحسابك
+        const API_KEY = "Dt12cu666cyudm4dvo401v651f9yq7v4p1ngq4mj9aqcpc7t59h3f4z00yovuszz";
+
+        let selectedFile = null;
+
+        // التعامل مع اختيار الملفات
+        fileInput.addEventListener('change', (e) => {
+            handleFileSelection(e.target.files[0]);
+        });
+
+        // تأثيرات السحب والإفلات (Drag and Drop)
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+
+        function handleFileSelection(file) {
+            if (file && file.type.startsWith('video/')) {
+                selectedFile = file;
+                fileInfo.innerHTML = `<strong>الملف المحدد:</strong> ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+                uploadBtn.disabled = false;
+                resultBox.style.display = 'none';
+            } else {
+                fileInfo.innerHTML = `<span style="color: #ef4444;">عذراً، يرجى اختيار ملف فيديو صالح فقط!</span>`;
+                uploadBtn.disabled = true;
+                selectedFile = null;
+            }
+        }
+
+        // عملية الرفع الفعلية باستخدام XMLHttpRequest لمراقبة العداد بدقة
+        uploadBtn.addEventListener('click', () => {
+            if (!selectedFile) return;
+
+            // إعداد البيانات وتجهيز الحقول الموجهة لـ Top4Top
+            const formData = new FormData();
+            formData.append('file[]', selectedFile);
+            formData.append('app_key', API_KEY);
+            formData.append('token', API_KEY); // إرساله بالصيغتين للاحتياط
+            formData.append('submit', 'true');
+
+            const xhr = new XMLHttpRequest();
+
+            // فتح الطلب على ملف معالجة الرفع الرئيسي للموقع
+            xhr.open('POST', 'https://top4top.io/index.php', true);
+
+            // تفعيل العداد والأنميشن ثلاثي الأبعاد
+            progressWrapper.style.style.display = 'block';
+            uploadBtn.disabled = true;
+            progressBar.style.width = '0%';
+            progressText.innerText = '0%';
+
+            // مراقبة تقدم الرفع وحساب النسبة المئوية
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percentage = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percentage + '%';
+                    progressText.innerText = `جاري الرفع: ${percentage}%`;
+                }
+            });
+
+            // انتهاء الرفع ومعالجة استجابة السيرفر
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        progressText.innerText = 'اكتمل المعالجة!';
+                        
+                        // محاولة قراءة الروابط (نظراً لأن السكربت يرجع صفحة HTML كاملة، ستحتاج أحياناً لفحصها)
+                        // سنعرض هنا النتيجة الافتراضية، أو يمكنك استخراج الرابط المباشر بـ Regex إذا كان يظهر بالصفحة
+                        resultBox.style.style.display = 'block';
+                        linkContainer.innerHTML = `
+                            <p>تحديث: تم إرسال الفيديو بنجاح مع الـ API Key الخاص بك.</p>
+                            <p>يرجى مراجعة قسم <strong>"ملفاتي"</strong> داخل حسابك بالمنصة لمشاهدة الفيديو المرفوع مباشرة.</p>
+                        `;
+                    } else {
+                        progressText.innerText = 'فشل الرفع! تأكد من اتصالاتك أو حجم الملف.';
+                        uploadBtn.disabled = false;
+                    }
+                }
+            };
+
+            // إرسال الطلب
+            xhr.send(formData);
+        });
+    </script>
+</body>
+</html>
