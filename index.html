@@ -68,10 +68,6 @@
             margin-bottom: 10px;
         }
 
-        #fileInput {
-            display: none;
-        }
-
         .file-info {
             margin-top: 15px;
             font-size: 14px;
@@ -106,6 +102,7 @@
             transform: none;
         }
 
+        /* 3D Progress Bar */
         .progress-wrapper {
             display: none;
             margin-top: 30px;
@@ -131,7 +128,7 @@
             background: linear-gradient(90deg, #0072ff, #00c6ff);
             position: relative;
             transform-style: preserve-3d;
-            transition: width 0.1s linear;
+            transition: width 0.3s ease;
             box-shadow: 0 0 12px rgba(0, 198, 255, 0.8);
         }
 
@@ -180,10 +177,18 @@
     <div class="upload-container">
         <h2>رفع فيديو إلى Top4Top</h2>
         
+        <form id="uploadForm" action="https://top4top.io/index.php" method="POST" enctype="multipart/form-data" target="hiddenIframe">
+            <input type="file" name="file[]" id="fileInput" accept="video/*" style="display: none;">
+            <input type="hidden" name="app_key" value="Dt12cu666cyudm4dvo401v651f9yq7v4p1ngq4mj9aqcpc7t59h3f4z00yovuszz">
+            <input type="hidden" name="token" value="Dt12cu666cyudm4dvo401v651f9yq7v4p1ngq4mj9aqcpc7t59h3f4z00yovuszz">
+            <input type="hidden" name="submit" value="true">
+        </form>
+
+        <iframe name="hiddenIframe" id="hiddenIframe" style="display: none;"></iframe>
+        
         <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
             <span>🎬</span>
-            <p>اسحب وأفلت ملف الفيديو هنا أو اضغط للتصفح</p>
-            <input type="file" id="fileInput" accept="video/*">
+            <p>اضغط هنا لاختيار ملف الفيديو</p>
         </div>
 
         <div class="file-info" id="fileInfo">لم يتم اختيار أي ملف بعد</div>
@@ -198,102 +203,82 @@
         </div>
 
         <div class="result-box" id="resultBox">
-            <p style="color: #10b981; margin-top: 0;">تم الرفع بنجاح! 🎉</p>
+            <p style="color: #10b981; margin-top: 0;">تم إرسال الملف! 🎉</p>
             <div id="linkContainer"></div>
         </div>
     </div>
 
     <script>
-        const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const fileInfo = document.getElementById('fileInfo');
         const uploadBtn = document.getElementById('uploadBtn');
+        const uploadForm = document.getElementById('uploadForm');
+        const hiddenIframe = document.getElementById('hiddenIframe');
+        
         const progressWrapper = document.getElementById('progressWrapper');
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
         const resultBox = document.getElementById('resultBox');
         const linkContainer = document.getElementById('linkContainer');
 
-        const API_KEY = "Dt12cu666cyudm4dvo401v651f9yq7v4p1ngq4mj9aqcpc7t59h3f4z00yovuszz";
-        let selectedFile = null;
+        let simulationInterval;
+        let isUploading = false;
 
         fileInput.addEventListener('change', (e) => {
-            handleFileSelection(e.target.files[0]);
-        });
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('drag-over');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('drag-over');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            if (e.dataTransfer.files.length > 0) {
-                handleFileSelection(e.dataTransfer.files[0]);
-            }
-        });
-
-        function handleFileSelection(file) {
+            const file = e.target.files[0];
             if (file && file.type.startsWith('video/')) {
-                selectedFile = file;
                 fileInfo.innerHTML = `<strong>الملف المحدد:</strong> ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
                 uploadBtn.disabled = false;
                 resultBox.style.display = 'none';
             } else {
                 fileInfo.innerHTML = `<span style="color: #ef4444;">عذراً، يرجى اختيار ملف فيديو صالح!</span>`;
                 uploadBtn.disabled = true;
-                selectedFile = null;
             }
-        }
+        });
 
         uploadBtn.addEventListener('click', () => {
-            if (!selectedFile) return;
+            if (fileInput.files.length === 0) return;
 
-            const formData = new FormData();
-            formData.append('file[]', selectedFile);
-            formData.append('app_key', API_KEY);
-            formData.append('token', API_KEY);
-            formData.append('submit', 'true');
-
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', 'https://top4top.io/index.php', true);
-
-            // تم تصحيح الأخطاء الإملائية هنا .style.display مباشرة
+            isUploading = true;
+            
+            // إظهار الواجهات وتعطيل الزر
             progressWrapper.style.display = 'block';
             uploadBtn.disabled = true;
             progressBar.style.width = '0%';
-            progressText.innerText = '0%';
+            progressText.innerText = 'جاري التحضير...';
 
-            xhr.upload.addEventListener('progress', (e) => {
-                if (e.lengthComputable) {
-                    const percentage = Math.round((e.loaded / e.total) * 100);
-                    progressBar.style.width = percentage + '%';
-                    progressText.innerText = `جاري الرفع: ${percentage}%`;
+            // إرسال الفورم برمجياً
+            uploadForm.submit();
+
+            // أنميشن وهمي يحاكي الرفع (لأن الـ CORS يمنعنا من قراءة البايتات الحقيقية)
+            let simulatedProgress = 0;
+            simulationInterval = setInterval(() => {
+                // يزيد ببطء حتى يصل إلى 90% وينتظر استجابة الـ iframe
+                if (simulatedProgress < 90) {
+                    simulatedProgress += Math.random() * 5;
+                    if (simulatedProgress > 90) simulatedProgress = 90;
+                    progressBar.style.width = simulatedProgress + '%';
+                    progressText.innerText = `جاري الرفع: ${Math.round(simulatedProgress)}%`;
                 }
-            });
+            }, 800);
+        });
 
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState === 4) {
-                    if (xhr.status === 200) {
-                        progressText.innerText = 'اكتمل المعالجة!';
-                        resultBox.style.display = 'block';
-                        linkContainer.innerHTML = `
-                            <p>تم إرسال البيانات بنجاح.</p>
-                            <p>راجع قسم <strong>"ملفاتي"</strong> في حسابك على المنصة للتأكد من وصول الفيديو.</p>
-                        `;
-                    } else {
-                        progressText.innerText = 'حدث خطأ في الرفع (قد يكون بسبب قيود الـ CORS عند الرفع من استضافة خارجية).';
-                        uploadBtn.disabled = false;
-                    }
-                }
-            };
-
-            xhr.send(formData);
+        // التقاط حدث انتهاء تحميل الـ iframe (أي انتهاء رفع الملف ومعالجته من سيرفر Top4Top)
+        hiddenIframe.addEventListener('load', () => {
+            if (isUploading) {
+                clearInterval(simulationInterval);
+                isUploading = false;
+                
+                progressBar.style.width = '100%';
+                progressText.innerText = 'اكتمل الرفع!';
+                
+                resultBox.style.display = 'block';
+                linkContainer.innerHTML = `
+                    <p>تم إرسال الملف بنجاح نحو المنصة عبر الـ Iframe.</p>
+                    <p>لا يمكن عرض الرابط هنا بسبب سياسات الحماية، يرجى مراجعة <strong>حسابك في الموقع</strong> لتأكيد وصول الفيديو.</p>
+                `;
+                uploadBtn.disabled = false;
+            }
         });
     </script>
 </body>
